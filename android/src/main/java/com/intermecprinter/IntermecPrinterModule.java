@@ -23,6 +23,7 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 
 	private static final String TAG = "HoneywellPrinter";
 	private String jsonCmdAttribStr = null;
+	private static Promise rPromise = null;
 
 	private final ReactApplicationContext reactContext;
 
@@ -85,19 +86,21 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 					output = null;
 				}
 			} catch (IOException e) {
+				if (BuildConfig.DEBUG) Log.d(TAG, e.getMessage());
 			}
 		}
 	}
 
 	@ReactMethod
-	public void print(String printerID, String macAddress, String text, final Promise promise) {
+	public void print(String printerID, String macAddress, String itemName, String itemNo,
+	                  final Promise promise) {
+		rPromise = promise;
 		// Create a PrintTask to do printing on a separate thread.
 		PrintTask task = new PrintTask();
 
 		// Executes PrintTask with the specified parameter which is passed
 		// to the PrintTask.doInBackground method.
-		task.execute(printerID, macAddress, text);
-		promise.resolve(true);
+		task.execute(printerID, macAddress, itemName, itemNo);
 	}
 
 
@@ -106,6 +109,12 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 	 * the UI in the UI thread.
 	 */
 	public class PrintTask extends AsyncTask<String, Integer, String> {
+		private static final String PROGRESS_CANCEL_MSG = "Printing cancelled\n";
+		private static final String PROGRESS_COMPLETE_MSG = "Printing completed\n";
+		private static final String PROGRESS_ENDDOC_MSG = "End of label printing\n";
+		private static final String PROGRESS_FINISHED_MSG = "Printer connection closed\n";
+		private static final String PROGRESS_NONE_MSG = "Unknown progress message\n";
+		private static final String PROGRESS_STARTDOC_MSG = "Start printing label\n";
 
 		/**
 		 * Runs on the UI thread before doInBackground(Params...).
@@ -128,10 +137,14 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 			LabelPrinter lp = null;
 			String sResult = null;
 			String sPrinterID = args[0];
-			String sPrinterURI = "bt://" + args[1];
-			String sText = args[2];
+			String sPrinterURI = "bt://" + formatMacAddress(args[1]);
+
+			String sItemName = args[2];
+			String sItemNo = args[3];
+
 			if (BuildConfig.DEBUG)
-				Log.d(TAG, "Printing to printer id " + sPrinterID + " with uri " + sPrinterURI + " and text " + sText);
+				Log.d(TAG, "Printing to printer id " + sPrinterID + " with uri " + sPrinterURI +
+						" and itemName " + sItemName + " and itemNo " + sItemNo);
 
 			LabelPrinter.ExtraSettings exSettings = new LabelPrinter.ExtraSettings();
 			exSettings.setContext(reactContext);
@@ -154,7 +167,7 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 
 				// A retry sequence in case the bluetooth socket is temporarily not ready
 				int numtries = 0;
-				int maxretry = 10;
+				int maxretry = 2;
 				while (numtries < maxretry) {
 					try {
 						lp.connect();  // Connects to the printer
@@ -168,12 +181,13 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 
 				// Sets up the variable dictionary.
 				LabelPrinter.VarDictionary varDataDict = new LabelPrinter.VarDictionary();
-				varDataDict.put("TextMsg", sText);
+				varDataDict.put("ItemName", sItemName);
+				varDataDict.put("ItemNo", sItemNo);
 
 				// Prints the ItemLabel as defined in the printer_profiles.JSON file.
 				lp.writeLabel("ItemLabel", varDataDict);
 
-				sResult = "Number of bytes sent to printer: " + lp.getBytesWritten();
+//				sResult = "Number of bytes sent to printer: " + lp.getBytesWritten();
 			} catch (LabelPrinterException ex) {
 				sResult = "LabelPrinterException: " + ex.getMessage();
 			} catch (Exception ex) {
@@ -191,6 +205,7 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 						lp.disconnect();  // Disconnects from the printer
 						lp.close();  // Releases resources
 					} catch (Exception ex) {
+						if (BuildConfig.DEBUG) Log.d(TAG, ex.getMessage());
 					}
 				}
 			}
@@ -208,6 +223,29 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 		@Override
 		protected void onProgressUpdate(Integer... values) {
 			// TODO
+			// Access the values array.
+			int progress = values[0];
+
+			switch (progress) {
+				case PrintProgressEvent.MessageTypes.CANCEL:
+//					textMsg.append(PROGRESS_CANCEL_MSG);
+					break;
+				case PrintProgressEvent.MessageTypes.COMPLETE:
+//					textMsg.append(PROGRESS_COMPLETE_MSG);
+					break;
+				case PrintProgressEvent.MessageTypes.ENDDOC:
+//					textMsg.append(PROGRESS_ENDDOC_MSG);
+					break;
+				case PrintProgressEvent.MessageTypes.FINISHED:
+//					textMsg.append(PROGRESS_FINISHED_MSG);
+					break;
+				case PrintProgressEvent.MessageTypes.STARTDOC:
+//					textMsg.append(PROGRESS_STARTDOC_MSG);
+					break;
+				default:
+//					textMsg.append(PROGRESS_NONE_MSG);
+					break;
+			}
 		}
 
 		/**
@@ -216,7 +254,41 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 		 */
 		@Override
 		protected void onPostExecute(String result) {
-			//
+			if (result != null) {
+				rPromise.reject(String.valueOf(1), result);
+			} else {
+				rPromise.resolve(true);
+			}
 		}
 	} //endofclass PrintTask
+
+
+	/**
+	 * If the specified MAC address contains 12 characters without the ":"
+	 * delimiters, it adds the delimiters; otherwise, it returns the original
+	 * string.
+	 *
+	 * @param aMacAddress A string containing the MAC address.
+	 * @return a formatted string or the original string.
+	 */
+	private static String formatMacAddress(String aMacAddress) {
+		if (aMacAddress != null && !aMacAddress.contains(":") &&
+				aMacAddress.length() == 12) {
+			// If the MAC address only contains hex digits without the
+			// ":" delimiter, then add ":" to the MAC address string.
+			char[] cAddr = new char[17];
+
+			for (int i = 0, j = 0; i < 12; i += 2) {
+				aMacAddress.getChars(i, i + 2, cAddr, j);
+				j += 2;
+				if (j < 17) {
+					cAddr[j++] = ':';
+				}
+			}
+
+			return new String(cAddr);
+		} else {
+			return aMacAddress;
+		}
+	}
 }
