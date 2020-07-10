@@ -8,9 +8,7 @@
     "src",
     "README.md",
     "android",
-    "index.js",
-    "ios",
-    "react-native-intermec-printer.podspec"
+    "index.js"
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
