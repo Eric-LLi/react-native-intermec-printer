@@ -212,7 +212,7 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 				}
 			}
 
-			if (BuildConfig.DEBUG) Log.d(TAG, sResult);
+			if (BuildConfig.DEBUG && sResult != null) Log.d(TAG, sResult);
 			// The result string will be passed to the onPostExecute method
 			// for display in the the Progress and Status text box.
 			return sResult;
