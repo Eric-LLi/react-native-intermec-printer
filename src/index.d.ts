@@ -4,5 +4,10 @@ export declare function sampleMethod(
 	callback: (str: string, num: number) => void
 ): void;
 
-export declare function print(printerID: string, macAddress: string, text: string): Promise<boolean>;
+export declare function print(
+	printerID: string,
+	macAddress: string,
+	itemName: string,
+	itemNo: string
+): Promise<boolean>;
 export declare function init(): Promise<boolean>;
