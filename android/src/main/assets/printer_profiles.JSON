@@ -126,7 +126,7 @@
       {
         "ItemLabel":
         {
-          "LabelDataStream": "DIR 4:AN 7:PP 40, 180:FT \"Swiss 721 Bold Condensed BT\",20:PT \"ItemName$$\":PP 150,180:BARSET \"CODE128\",3,1,4,240:PB \"ItemNo$$\":PP 400, 330:FT \"Letter Gothic 12 Pitch BT\",14:PT \"ItemNo$$\":PF\r\n",
+          "LabelDataStream": "DIR 4:AN 7:PP 40, 180:FT \"Swiss 721 Bold Condensed BT\",20:PT \"ItemName$$\":PP 250,180:BARSET \"QRCODE\",1,1,13,2,2:PB \"ItemNo$$\":PP 400, 260:FT \"Letter Gothic 12 Pitch BT\",14:PT \"ItemNo$$\":PF\r\n",
           "VarPostfix": "$$"
         },
 
