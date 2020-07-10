@@ -15,12 +15,14 @@ import com.honeywell.mobility.print.PrintProgressEvent;
 import com.honeywell.mobility.print.PrintProgressListener;
 
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
 public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 
 	private static final String TAG = "HoneywellPrinter";
+	private String jsonCmdAttribStr = null;
 
 	private final ReactApplicationContext reactContext;
 
@@ -44,6 +46,48 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 	/*******************************/
 	/** Methods Available from JS **/
 	/*******************************/
+
+	@ReactMethod
+	public void init(Promise promise) {
+		InputStream input = null;
+		ByteArrayOutputStream output = null;
+		AssetManager assetManager = reactContext.getAssets();
+
+		try {
+			input = assetManager.open("printer_profiles.JSON");
+			output = new ByteArrayOutputStream(8000);
+
+			byte[] buf = new byte[1024];
+			int len;
+			while ((len = input.read(buf)) > 0) {
+				output.write(buf, 0, len);
+			}
+			input.close();
+			input = null;
+
+			output.flush();
+			output.close();
+			jsonCmdAttribStr = output.toString();
+			output = null;
+
+			promise.resolve(true);
+		} catch (Exception ex) {
+			promise.reject(ex);
+		} finally {
+			try {
+				if (input != null) {
+					input.close();
+					input = null;
+				}
+
+				if (output != null) {
+					output.close();
+					output = null;
+				}
+			} catch (IOException e) {
+			}
+		}
+	}
 
 	@ReactMethod
 	public void print(String printerID, String macAddress, String text, final Promise promise) {
@@ -79,19 +123,7 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 		 */
 		@Override
 		protected String doInBackground(String... args) {
-			AssetManager manager = reactContext.getAssets();
-			byte[] buffer = null;
-			try {
-
-				InputStream stream = manager.open("printerprofiles.json");
-				int size = stream.available();
-				buffer = new byte[size];
-				stream.read(buffer);
-				stream.close();
-			} catch (IOException e) {
-				if (BuildConfig.DEBUG) Log.d(TAG, "Printer profile file error: " + e.getMessage());
-			}
-			String profiles = new String(buffer).trim();
+			String profiles = jsonCmdAttribStr.trim();
 
 			LabelPrinter lp = null;
 			String sResult = null;
