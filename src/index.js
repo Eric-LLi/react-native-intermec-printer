@@ -2,6 +2,10 @@ import { NativeModules } from 'react-native';
 
 const { IntermecPrinter } = NativeModules;
 
+export const init = () => {
+	return IntermecPrinter.init();
+}
+
 export const sampleMethod = (str, num, callback) => {
 	IntermecPrinter.sampleMethod(str, num, callback);
 };

@@ -5,3 +5,4 @@ export declare function sampleMethod(
 ): void;
 
 export declare function print(printerID: string, macAddress: string, text: string): Promise<boolean>;
+export declare function init(): Promise<boolean>;
