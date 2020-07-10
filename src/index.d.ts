@@ -9,5 +9,5 @@ export declare function print(
 	macAddress: string,
 	itemName: string,
 	itemNo: string
-): Promise<boolean>;
+): Promise<boolean | Error>;
 export declare function init(): Promise<boolean>;
