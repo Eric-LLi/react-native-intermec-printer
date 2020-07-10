@@ -1,11 +1,26 @@
 package com.intermecprinter;
 
+import android.content.res.AssetManager;
+import android.os.AsyncTask;
+import android.util.Log;
+
+import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.Callback;
+import com.honeywell.mobility.print.LabelPrinter;
+import com.honeywell.mobility.print.LabelPrinterException;
+import com.honeywell.mobility.print.PrintProgressEvent;
+import com.honeywell.mobility.print.PrintProgressListener;
+
+
+import java.io.IOException;
+import java.io.InputStream;
 
 public class IntermecPrinterModule extends ReactContextBaseJavaModule {
+
+	private static final String TAG = "HoneywellPrinter";
 
 	private final ReactApplicationContext reactContext;
 
@@ -52,21 +67,19 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 		 * Runs on the UI thread before doInBackground(Params...).
 		 */
 		@Override
-		protected void onPreExecute()
-		{
+		protected void onPreExecute() {
 			//
 		}
 
-		/**	
+		/**
 		 * This method runs on a background thread. The specified parameters
 		 * are the parameters passed to the execute method by the caller of
 		 * this task. This method can call publishProgress to publish updates
 		 * on the UI thread.
 		 */
 		@Override
-		protected String doInBackground(String... args)
-		{
-			AssetManager manager = mReactContext.getAssets();
+		protected String doInBackground(String... args) {
+			AssetManager manager = reactContext.getAssets();
 			byte[] buffer = null;
 			try {
 
@@ -76,7 +89,7 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 				stream.read(buffer);
 				stream.close();
 			} catch (IOException e) {
-				if (D) Log.d(TAG, "Printer profile file error: " + e.getMessage());
+				if (BuildConfig.DEBUG) Log.d(TAG, "Printer profile file error: " + e.getMessage());
 			}
 			String profiles = new String(buffer).trim();
 
@@ -85,13 +98,13 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 			String sPrinterID = args[0];
 			String sPrinterURI = "bt://" + args[1];
 			String sText = args[2];
-			if (D) Log.d(TAG, "Printing to printer id " + sPrinterID + " with uri " + sPrinterURI + " and text " + sText);
+			if (BuildConfig.DEBUG)
+				Log.d(TAG, "Printing to printer id " + sPrinterID + " with uri " + sPrinterURI + " and text " + sText);
 
 			LabelPrinter.ExtraSettings exSettings = new LabelPrinter.ExtraSettings();
-			exSettings.setContext(mReactContext);
+			exSettings.setContext(reactContext);
 
-			try
-			{
+			try {
 				lp = new LabelPrinter(
 						profiles,
 						sPrinterID,
@@ -101,8 +114,7 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 				// Registers to listen for the print progress events.
 				lp.addPrintProgressListener(new PrintProgressListener() {
 					@Override
-					public void receivedStatus(PrintProgressEvent aEvent)
-					{
+					public void receivedStatus(PrintProgressEvent aEvent) {
 						// Publishes updates on the UI thread.
 						publishProgress(aEvent.getMessageType());
 					}
@@ -111,15 +123,11 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 				// A retry sequence in case the bluetooth socket is temporarily not ready
 				int numtries = 0;
 				int maxretry = 10;
-				while(numtries < maxretry)
-				{
-					try
-					{
+				while (numtries < maxretry) {
+					try {
 						lp.connect();  // Connects to the printer
 						break;
-					}
-					catch (LabelPrinterException ex)
-					{
+					} catch (LabelPrinterException ex) {
 						numtries++;
 						Thread.sleep(1000);
 					}
@@ -134,36 +142,28 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 				lp.writeLabel("ItemLabel", varDataDict);
 
 				sResult = "Number of bytes sent to printer: " + lp.getBytesWritten();
-			}
-			catch (LabelPrinterException ex)
-			{
+			} catch (LabelPrinterException ex) {
 				sResult = "LabelPrinterException: " + ex.getMessage();
-			}
-			catch (Exception ex)
-			{
+			} catch (Exception ex) {
 				if (ex.getMessage() != null)
 					sResult = "Unexpected exception: " + ex.getMessage();
 				else
 					sResult = "Unexpected exception.";
-			}
-			finally
-			{
-				if (lp != null)
-				{
-					try
-					{
+			} finally {
+				if (lp != null) {
+					try {
 						// Notes: To ensure the data is transmitted to the printer
 						// before the connection is closed, both PB22_Fingerprint and
 						// PB32_Fingerprint printer entries specify a PreCloseDelay setting
 						// in the printer_profiles.JSON file included with this sample.
 						lp.disconnect();  // Disconnects from the printer
 						lp.close();  // Releases resources
+					} catch (Exception ex) {
 					}
-					catch (Exception ex) {}
 				}
 			}
 
-			if (D) Log.d(TAG, sResult);
+			if (BuildConfig.DEBUG) Log.d(TAG, sResult);
 			// The result string will be passed to the onPostExecute method
 			// for display in the the Progress and Status text box.
 			return sResult;
@@ -174,8 +174,7 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 		 * specified values are the values passed to publishProgress.
 		 */
 		@Override
-		protected void onProgressUpdate(Integer... values)
-		{
+		protected void onProgressUpdate(Integer... values) {
 			// TODO
 		}
 
@@ -184,8 +183,7 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 		 * result parameter is the value returned by doInBackground.
 		 */
 		@Override
-		protected void onPostExecute(String result)
-		{
+		protected void onPostExecute(String result) {
 			//
 		}
 	} //endofclass PrintTask
