@@ -7,7 +7,8 @@ export declare function sampleMethod(
 export declare function print(
 	printerID: string,
 	macAddress: string,
-	itemName: string,
-	itemNo: string
+	title: string,
+	barcode: string,
+	ticket_type: string
 ): Promise<boolean | Error>;
 export declare function init(): Promise<boolean>;

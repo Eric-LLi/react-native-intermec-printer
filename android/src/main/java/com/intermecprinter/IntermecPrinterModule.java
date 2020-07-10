@@ -92,7 +92,7 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 	}
 
 	@ReactMethod
-	public void print(String printerID, String macAddress, String itemName, String itemNo,
+	public void print(String printerID, String macAddress, String title, String barcode, String ticket_type,
 	                  final Promise promise) {
 		rPromise = promise;
 		// Create a PrintTask to do printing on a separate thread.
@@ -100,7 +100,7 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 
 		// Executes PrintTask with the specified parameter which is passed
 		// to the PrintTask.doInBackground method.
-		task.execute(printerID, macAddress, itemName, itemNo);
+		task.execute(printerID, macAddress, title, barcode, ticket_type);
 	}
 
 
@@ -139,8 +139,9 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 			String sPrinterID = args[0];
 			String sPrinterURI = "bt://" + formatMacAddress(args[1]);
 
-			String sItemName = args[2];
-			String sItemNo = args[3];
+			String sTitle = args[2];
+			String sBarcode = args[3];
+			String sTicketType = args[4];
 
 			if (BuildConfig.DEBUG)
 				Log.d(TAG, "Printing to printer id " + sPrinterID + " with uri " + sPrinterURI +
@@ -181,8 +182,9 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 
 				// Sets up the variable dictionary.
 				LabelPrinter.VarDictionary varDataDict = new LabelPrinter.VarDictionary();
-				varDataDict.put("ItemName", sItemName);
-				varDataDict.put("ItemNo", sItemNo);
+				varDataDict.put("ItemName", sTitle);
+				varDataDict.put("ItemNo", sBarcode);
+				varDataDict.put("ItemTicket", sTicketType);
 
 				// Prints the ItemLabel as defined in the printer_profiles.JSON file.
 				lp.writeLabel("ItemLabel", varDataDict);
