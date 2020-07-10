@@ -15,11 +15,11 @@ public class IntermecPrinterPackage implements ReactPackage {
 	public List<NativeModule> createNativeModules(ReactApplicationContext reactContext) {
 		return Arrays.<NativeModule>asList(new IntermecPrinterModule(reactContext));
 	}
-
-	@Override
-	public List<Class<? extends JavaScriptModule>> createJSModules() {
-		return null;
-	}
+//
+//	@Override
+//	public List<Class<? extends JavaScriptModule>> createJSModules() {
+//		return null;
+//	}
 
 	@Override
 	public List<ViewManager> createViewManagers(ReactApplicationContext reactContext) {
