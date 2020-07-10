@@ -5,6 +5,7 @@
   "description": "TODO",
   "main": "./src/index.js",
   "files": [
+    "src/",
     "README.md",
     "android",
     "index.js",
