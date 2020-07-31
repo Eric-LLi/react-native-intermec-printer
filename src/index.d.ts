@@ -11,4 +11,5 @@ export declare function print(
 	barcode: string,
 	ticket_type: string
 ): Promise<boolean | Error>;
+
 export declare function init(): Promise<boolean>;
