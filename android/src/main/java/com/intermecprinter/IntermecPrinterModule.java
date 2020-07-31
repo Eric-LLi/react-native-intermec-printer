@@ -1,31 +1,33 @@
 package com.intermecprinter;
 
-import android.content.res.AssetManager;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import com.facebook.react.bridge.Callback;
+import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
-import com.facebook.react.bridge.Callback;
 import com.honeywell.mobility.print.LabelPrinter;
 import com.honeywell.mobility.print.LabelPrinterException;
 import com.honeywell.mobility.print.PrintProgressEvent;
 import com.honeywell.mobility.print.PrintProgressListener;
+import com.intermecprinter.usb.USBDeviceConCallback;
+import com.intermecprinter.usb.USBDeviceDef;
+import com.intermecprinter.usb.USBDeviceHandler;
+import com.intermecprinter.usb.USBDeviceModel;
 
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-
-public class IntermecPrinterModule extends ReactContextBaseJavaModule {
+public class IntermecPrinterModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
 
 	private static final String TAG = "HoneywellPrinter";
 	private String jsonCmdAttribStr = null;
 	private static Promise rPromise = null;
+	private static LabelPrinter lp = null;
 
 	private final ReactApplicationContext reactContext;
+
+	private static final int UPDATE_STATUS_PRINTER = 18;
 
 	public IntermecPrinterModule(ReactApplicationContext reactContext) {
 		super(reactContext);
@@ -37,6 +39,104 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 		return "IntermecPrinter";
 	}
 
+	@Override
+	public void onHostResume() {
+		USBDeviceHandler.getInstance().addCallback(mCallback);
+		USBDeviceHandler.getInstance().initializeUsbFinder(this.reactContext, USBDeviceDef.printer);
+	}
+
+	@Override
+	public void onHostPause() {
+		USBDeviceHandler.getInstance().destory();
+	}
+
+	@Override
+	public void onHostDestroy() {
+
+	}
+
+//	private void PrintImage() {
+//		String str1 = "CLIP ON\n" +
+//				"CLIP BARCODE ON\n" +
+//				"LBLCOND 3,2\n" +
+//				"CLL\n" +
+//				"OPTIMIZE \"BATCH\" OFF\n";
+//
+//		String str2 = "ALIGN 8\n" +
+//				"PP 413,1144\n" +
+//				"DIR 1\n" +
+//				"PRIMAGE \"BADGE.PNG\"\n";
+//
+//		String str3 = "NASC 8\n" +
+//				"FT \"Univers Concensed Bold\"\n" +
+//				"FONTSIZE 26\n" +
+//				"FONTSLANT 0\n" +
+//				"PP 413,740\n" +
+//				"PT " + "\"" + strFirstName + "\"" + "\n" +
+//				"FONTSIZE 18\n" +
+//				"PP 413,640\n" +
+//				"PT " + "\"" + strLastName + "\"" + "\n";
+//
+//		String str4 = "FT \"Andale Mono\"\n" +
+//				"FONTSIZE 14\n" +
+//				"FONTSLANT 0\n" +
+//				"PP 413,500\n" +
+//				"PT " + "\"" + strOrg + "\"" + "\n";
+//
+//		String str5 = "FT \"Andale Mono Bold\"\n" +
+//				"FONTSIZE 20\n" +
+//				"FONTSLANT 0\n" +
+//				"PP 413,460\n" +
+//				"PT " + "\"" + strCountry + "\"" + "\n";
+//		String str6 =
+//				"PRPOS 413,370\n" +
+//						"BARSET \"QRCODE\",1,1,8,2,4" + "\n" +
+//						"BARFONT OFF\n" +
+//						"PRBAR" + " \"" + strCode + "\"" + "\n";
+//
+//		String strText = "Monospace 821 Bold";
+//		String str7 =
+//				"FT \"Monospace 821 Bold\"\n" +
+//						"FONTSIZE 20\n" +
+//						"FONTSLANT 0\n" +
+//						"PP 413,75\n" +
+//						"PT \"DELEGATE\"\n";
+//
+//		String str8 = "PF\n";
+//		String str = str1 + str2 + str3 + str4 + str5 + str6 + str7 + str8;
+//		testBytes = str.getBytes();
+//
+//		USBDeviceHandler.getInstance().sendRawData(testBytes);
+//	}
+
+	private USBDeviceConCallback mCallback = new USBDeviceConCallback() {
+		@Override
+		public void DeviceDPI(int Dpi) {
+			Log.d(TAG, "MESSAGE");
+//			PrintImage();
+		}
+
+		@Override
+		public void onConnectionStatus(int status, USBDeviceModel usbDevice) {
+			switch (status) {
+				case USBDeviceDef.STATE_CONNECTED:
+					break;
+				case USBDeviceDef.STATE_DISCONNECTED:
+					break;
+			}
+		}
+
+		@Override
+		public void DeviceStatus(String str) {
+			if (str.equals("Ok")) {
+				String strQueryStatus = "?SYSVAR(21)\n";
+				USBDeviceHandler.getInstance().sendRawData(strQueryStatus.getBytes());
+			} else {
+				Log.d(TAG, str);
+			}
+		}
+	};
+
 	@ReactMethod
 	public void sampleMethod(String stringArgument, int numberArgument, Callback callback) {
 		// TODO: Implement some actually useful functionality
@@ -47,49 +147,6 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 	/*******************************/
 	/** Methods Available from JS **/
 	/*******************************/
-
-	@ReactMethod
-	public void init(Promise promise) {
-		InputStream input = null;
-		ByteArrayOutputStream output = null;
-		AssetManager assetManager = reactContext.getAssets();
-
-		try {
-			input = assetManager.open("printer_profiles.JSON");
-			output = new ByteArrayOutputStream(8000);
-
-			byte[] buf = new byte[1024];
-			int len;
-			while ((len = input.read(buf)) > 0) {
-				output.write(buf, 0, len);
-			}
-			input.close();
-			input = null;
-
-			output.flush();
-			output.close();
-			jsonCmdAttribStr = output.toString();
-			output = null;
-
-			promise.resolve(true);
-		} catch (Exception ex) {
-			promise.reject(ex);
-		} finally {
-			try {
-				if (input != null) {
-					input.close();
-					input = null;
-				}
-
-				if (output != null) {
-					output.close();
-					output = null;
-				}
-			} catch (IOException e) {
-				if (BuildConfig.DEBUG) Log.d(TAG, e.getMessage());
-			}
-		}
-	}
 
 	@ReactMethod
 	public void print(String profile, String printerID, String macAddress, String title,
@@ -142,7 +199,7 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 			String sBarcode = args[4];
 			String sTicketType = args[5];
 
-			LabelPrinter lp = null;
+//			LabelPrinter lp = null;
 			String sResult = null;
 
 			if (BuildConfig.DEBUG)
@@ -181,6 +238,8 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule {
 					}
 				}
 				if (numtries == maxretry) lp.connect();//Final retry
+
+				int test[] = lp.getStatus();
 
 				// Sets up the variable dictionary.
 				LabelPrinter.VarDictionary varDataDict = new LabelPrinter.VarDictionary();
