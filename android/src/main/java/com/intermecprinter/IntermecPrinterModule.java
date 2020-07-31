@@ -32,6 +32,7 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule implements
 	public IntermecPrinterModule(ReactApplicationContext reactContext) {
 		super(reactContext);
 		this.reactContext = reactContext;
+		this.reactContext.addLifecycleEventListener(this);
 	}
 
 	@Override
@@ -52,9 +53,20 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule implements
 
 	@Override
 	public void onHostDestroy() {
-
+		//
 	}
 
+	@ReactMethod
+	public void test() {
+		String preCommand = "\n";
+		USBDeviceHandler.getInstance().sendRawData(preCommand.getBytes());
+		preCommand = "VERBON\n";
+		USBDeviceHandler.getInstance().sendRawData(preCommand.getBytes());
+		preCommand = "INPUT OFF\n";
+		USBDeviceHandler.getInstance().sendRawData(preCommand.getBytes());
+		String strQueryStatus = "?PRSTAT\n";
+		USBDeviceHandler.getInstance().sendRawData(strQueryStatus.getBytes());
+	}
 //	private void PrintImage() {
 //		String str1 = "CLIP ON\n" +
 //				"CLIP BARCODE ON\n" +
