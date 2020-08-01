@@ -1,17 +1,30 @@
-import { NativeModules } from 'react-native';
+import { NativeModules, NativeEventEmitter } from 'react-native';
 
 const { IntermecPrinter } = NativeModules;
 
-export const init = () => {
-	return IntermecPrinter.init();
+export const PrinterEvents = {
+	PRINTER_ERROR: 'printererror',
+	PRINTER_STATUS: 'printerstatus',
 };
 
-export const sampleMethod = (str, num, callback) => {
-	IntermecPrinter.sampleMethod(str, num, callback);
+const events = {};
+
+const eventEmitter = new NativeEventEmitter(IntermecPrinter);
+
+IntermecPrinter.on = (event, handler) => {
+	const eventListener = eventEmitter.addListener(event, handler);
+
+	events[event] = eventListener;
 };
 
-export const print = (printerID, macAddress, title, barcode, ticket_type) => {
-	return IntermecPrinter.print(printerID, macAddress, title, barcode, ticket_type);
+IntermecPrinter.off = (event, handler) => {
+	if (events.hasOwnProperty(event)) {
+		const eventListener = events[event];
+
+		eventListener.remove();
+
+		delete events[event];
+	}
 };
 
 export default IntermecPrinter;
