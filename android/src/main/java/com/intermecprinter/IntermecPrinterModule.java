@@ -3,12 +3,19 @@ package com.intermecprinter;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import androidx.annotation.Nullable;
+
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
+import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.honeywell.mobility.print.LabelPrinter;
 import com.honeywell.mobility.print.LabelPrinterException;
 import com.honeywell.mobility.print.PrintProgressEvent;
@@ -24,15 +31,36 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule implements
 	private String jsonCmdAttribStr = null;
 	private static Promise rPromise = null;
 	private static LabelPrinter lp = null;
+	private static ReadableArray sendMsg;
+
+	private static final String PRINTER_ERROR = "printererror";
+	private static final String PRINTER_STATUS = "printerstatus";
 
 	private final ReactApplicationContext reactContext;
 
-	private static final int UPDATE_STATUS_PRINTER = 18;
+	private static boolean is_connected = false;
+	private static boolean is_usb = false;
 
 	public IntermecPrinterModule(ReactApplicationContext reactContext) {
 		super(reactContext);
 		this.reactContext = reactContext;
 		this.reactContext.addLifecycleEventListener(this);
+	}
+
+	private void sendEvent(
+			String eventName,
+			@Nullable WritableMap params) {
+		this.reactContext
+				.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+				.emit(eventName, params);
+	}
+
+	private void sendEvent(
+			String eventName,
+			@Nullable String msg) {
+		this.reactContext
+				.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+				.emit(eventName, msg);
 	}
 
 	@Override
@@ -42,22 +70,33 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule implements
 
 	@Override
 	public void onHostResume() {
-		USBDeviceHandler.getInstance().addCallback(mCallback);
-		USBDeviceHandler.getInstance().initializeUsbFinder(this.reactContext, USBDeviceDef.printer);
+//		doConnect();
 	}
 
 	@Override
 	public void onHostPause() {
-		USBDeviceHandler.getInstance().destory();
+//		doDisconnect();
 	}
 
 	@Override
 	public void onHostDestroy() {
-		//
+		doDisconnect();
 	}
 
 	@ReactMethod
-	public void test() {
+	public void init() {
+		doConnect();
+	}
+
+	@ReactMethod
+	public void disconnect() {
+		doDisconnect();
+	}
+
+	@ReactMethod
+	public void printUSB(ReadableArray msg) {
+		sendMsg = msg;
+
 		String preCommand = "\n";
 		USBDeviceHandler.getInstance().sendRawData(preCommand.getBytes());
 		preCommand = "VERBON\n";
@@ -67,74 +106,88 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule implements
 		String strQueryStatus = "?PRSTAT\n";
 		USBDeviceHandler.getInstance().sendRawData(strQueryStatus.getBytes());
 	}
-//	private void PrintImage() {
-//		String str1 = "CLIP ON\n" +
-//				"CLIP BARCODE ON\n" +
-//				"LBLCOND 3,2\n" +
-//				"CLL\n" +
-//				"OPTIMIZE \"BATCH\" OFF\n";
-//
-//		String str2 = "ALIGN 8\n" +
-//				"PP 413,1144\n" +
-//				"DIR 1\n" +
-//				"PRIMAGE \"BADGE.PNG\"\n";
-//
-//		String str3 = "NASC 8\n" +
-//				"FT \"Univers Concensed Bold\"\n" +
-//				"FONTSIZE 26\n" +
-//				"FONTSLANT 0\n" +
-//				"PP 413,740\n" +
-//				"PT " + "\"" + strFirstName + "\"" + "\n" +
-//				"FONTSIZE 18\n" +
-//				"PP 413,640\n" +
-//				"PT " + "\"" + strLastName + "\"" + "\n";
-//
-//		String str4 = "FT \"Andale Mono\"\n" +
-//				"FONTSIZE 14\n" +
-//				"FONTSLANT 0\n" +
-//				"PP 413,500\n" +
-//				"PT " + "\"" + strOrg + "\"" + "\n";
-//
-//		String str5 = "FT \"Andale Mono Bold\"\n" +
-//				"FONTSIZE 20\n" +
-//				"FONTSLANT 0\n" +
-//				"PP 413,460\n" +
-//				"PT " + "\"" + strCountry + "\"" + "\n";
-//		String str6 =
-//				"PRPOS 413,370\n" +
-//						"BARSET \"QRCODE\",1,1,8,2,4" + "\n" +
-//						"BARFONT OFF\n" +
-//						"PRBAR" + " \"" + strCode + "\"" + "\n";
-//
-//		String strText = "Monospace 821 Bold";
-//		String str7 =
-//				"FT \"Monospace 821 Bold\"\n" +
-//						"FONTSIZE 20\n" +
-//						"FONTSLANT 0\n" +
-//						"PP 413,75\n" +
-//						"PT \"DELEGATE\"\n";
-//
-//		String str8 = "PF\n";
-//		String str = str1 + str2 + str3 + str4 + str5 + str6 + str7 + str8;
+
+	@ReactMethod
+	public void ConnectType(boolean isUSB) {
+		if (!isUSB && is_connected) {
+			doDisconnect();
+		}
+
+		is_usb = isUSB;
+	}
+
+	private void doConnect() {
+		if (!is_connected && is_usb) {
+			USBDeviceHandler.getInstance().addCallback(mCallback);
+			USBDeviceHandler.getInstance().initializeUsbFinder(this.reactContext, USBDeviceDef.printer);
+
+			is_connected = true;
+		}
+	}
+
+	private void doDisconnect() {
+		if (is_connected && is_usb) {
+			USBDeviceHandler.getInstance().destory();
+			is_connected = false;
+		}
+	}
+
+	private void doPrint() {
+		byte[] testBytes;
+
+		String str1 = "ALIGN 8\n" +
+				"DIR 4\n";
+
+		String str2 =
+				"FT \"Swiss 721 Bold Condensed BT\"\n" +
+						"FONTSIZE 26\n" +
+						"FONTSLANT 0\n" +
+						"PP 40,460\n" +
+						"PT " + "\"" + "Test Label" + "\"" + "\n" +
+						"FONTSIZE 26\n" +
+						"PP 150,460\n" +
+						"PT " + "\"" + "Test ticket" + "\"" + "\n";
+
+		String str3 =
+				"PP 460,460\n" +
+						"BARSET \"QRCODE\",1,1,13,2,2" + "\n" +
+						"BARFONT OFF\n" +
+						"PRBAR" + " \"" + "929260031" + "\"" + "\n";
+
+		String str4 = "PF\n";
+		String str = str1 + str2 + str3 + str4;
 //		testBytes = str.getBytes();
-//
-//		USBDeviceHandler.getInstance().sendRawData(testBytes);
-//	}
+		if (sendMsg.size() > 0) {
+			for (int i = 0; i < sendMsg.size(); i++) {
+				testBytes = sendMsg.getString(i).getBytes();
+
+				USBDeviceHandler.getInstance().sendRawData(testBytes);
+
+				sendEvent(PRINTER_STATUS, "completed");
+			}
+
+		}
+	}
 
 	private USBDeviceConCallback mCallback = new USBDeviceConCallback() {
 		@Override
 		public void DeviceDPI(int Dpi) {
 			Log.d(TAG, "MESSAGE");
-//			PrintImage();
+
+			doPrint();
 		}
 
 		@Override
 		public void onConnectionStatus(int status, USBDeviceModel usbDevice) {
 			switch (status) {
-				case USBDeviceDef.STATE_CONNECTED:
+				case USBDeviceDef.STATE_CONNECTED: {
+					sendEvent(PRINTER_STATUS, "connected");
 					break;
-				case USBDeviceDef.STATE_DISCONNECTED:
+				}
+				case USBDeviceDef.STATE_DISCONNECTED: {
+					sendEvent(PRINTER_STATUS, "disconnected");
 					break;
+				}
 			}
 		}
 
@@ -145,6 +198,8 @@ public class IntermecPrinterModule extends ReactContextBaseJavaModule implements
 				USBDeviceHandler.getInstance().sendRawData(strQueryStatus.getBytes());
 			} else {
 				Log.d(TAG, str);
+
+				sendEvent(PRINTER_ERROR, str);
 			}
 		}
 	};
