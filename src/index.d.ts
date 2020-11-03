@@ -14,7 +14,6 @@ export declare function print(
 	macAddress: string,
 	title: string,
 	barcode: string,
-	ticket_type: string
 ): Promise<boolean | Error>;
 
 export declare function printUSB(msg: Array<string>): void;
