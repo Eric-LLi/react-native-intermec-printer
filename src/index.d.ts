@@ -18,12 +18,12 @@ export declare function print(
 
 export declare function printUSB(msg: Array<string>): void;
 
-export declare function on(event: PrinterEvents, callback: (errorMsg: string) => void): void;
-export declare function off(event: PrinterEvents, callback: (errorMsg: string) => void): void;
+export declare function on(event: PRINTER_EVENTS, callback: (errorMsg: string) => void): void;
+export declare function off(event: PRINTER_EVENTS, callback: (errorMsg: string) => void): void;
 
 export declare function ConnectType(is_usb: boolean) : void;
 
-export enum PrinterEvents {
+export enum PRINTER_EVENTS {
 	PRINTER_ERROR = 'printererror',
 	PRINTER_STATUS = 'printerstatus',
 }
