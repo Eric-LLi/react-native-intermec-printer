@@ -2,7 +2,7 @@ import { NativeModules, NativeEventEmitter } from 'react-native';
 
 const { IntermecPrinter } = NativeModules;
 
-export const PrinterEvents = {
+export const PRINTER_EVENTS = {
 	PRINTER_ERROR: 'printererror',
 	PRINTER_STATUS: 'printerstatus',
 };
