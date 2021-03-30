@@ -73,9 +73,9 @@ public class USBDeviceFinder {
 				if (!mUsbManager.hasPermission(device)) {
 					try {
 						// if use following function, will pop up dialog to ask the right
-						// requestUsbPermission(device);
+						requestUsbPermission(device);
 						// if use following function. will not pop up dialog but need to send the apk to honeywell for signing
-						grantAutomaticPermission(device);
+						// grantAutomaticPermission(device);
 						//   broadcastReceivedUSBDevice(device, USBDeviceDef.STATE_CONNECTED);
 					} catch (NullPointerException e) {
 						//DLog.e(e.toString());
@@ -229,8 +229,8 @@ public class USBDeviceFinder {
 					if ((device.getProductId() == 89) || (device.getProductId() == 63)) {
 						//   ||((device.getProductId() == 3655) || (device.getProductId() == 3649)|| (device.getProductId() == 0xe53))) {
 						try {
-							//  requestUsbPermission(device);
-							grantAutomaticPermission(device);
+							 requestUsbPermission(device);
+							// grantAutomaticPermission(device);
 						} catch (NullPointerException e) {
 							//DLog.e(e.toString());
 						}
